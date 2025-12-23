@@ -78,6 +78,12 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
     )
     pdf.paragraph("Programación y Análisis de Sistemas")
     pdf.ln(1)
+    pdf.texto_doble_alineado(
+        izquierda="AIEP, 2026 - 2027",
+        derecha="Puerto Varas, Chile"
+    )
+    pdf.paragraph("INGENIERÍA DE EJECUCIÓN EN INFORMÁTICA MENCIÓN, DESARROLLO DE SISTEMAS")
+    pdf.ln(1)
 
     #------------------------------------------
     #------------------------------------------
@@ -109,7 +115,7 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
         bloques.append(f"Otros: {', '.join(grupos['Otros'])}")
 
     bloques.extend([
-        "Frameworks: React, Next.js, FastAPI, .NET, Flet",
+        "Frameworks: React, Next.js, FastAPI, Flet",
         "Bases de Datos: MySQL, Oracle, SQL Server",
         "Herramientas: Visual Studio, VS Code",
         "Sistemas Operativos: Windows, Linux"
@@ -121,7 +127,7 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
 
     #------------------------------------------
     pdf.section_title("Disponibilidad")
-    pdf.paragraph("Disponible para trabajar presencialmente en Santiago o de forma híbrida. Con disposición para viajar según se requiera.")
+    pdf.paragraph("Disponible para trabajar 100% online, presencialmente en Santiago o de forma híbrida. Con disposición para viajar según se requiera.")
 
     # PDF en memoria con BytesIO
     pdf_bytes = pdf.output(dest='S').encode('latin1')

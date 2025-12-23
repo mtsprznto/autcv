@@ -75,6 +75,32 @@ def generar_experiencia_desde_readme(propuesta: str, proyectos: list) -> list:
                 "Extrae palabras clave relevantes y redacta una descripción profesional, clara y orientada al impacto. "
                 "Devuelve un array JSON con: 'titulo', 'experiencia_cv', 'keywords_detectadas'. "
                 "No incluyas explicaciones ni texto adicional fuera del JSON."
+                "Ten en cuenta lo siguiente:\n"
+                """
+                - Agregar logros medibles en cada experiencia.
+                - Incluir responsabilidades específicas y resultados.
+                - Detallar duración y contexto de cada rol.
+                - Relacionar experiencia con habilidades clave.
+                - Buscar incluir experiencia formal o voluntariados.
+                """
+                """
+                Example output:
+                Desarrollador de Aplicaciones Web (May 2024 - Ago 2024): Implementé plataforma e-commerce con Stripe, aumentando la usabilidad y seguridad.
+                Especialista en Automatización (Mar 2024 - Jun 2024): Optimicé procesos con Python y Selenium, reduciendo tiempos de gestión en un 30%.
+                """
+                "Tambien ten en cuenta:\n"
+                """
+                - Incluir resultados numéricos concretos.
+                - Destacar premios o reconocimientos si existen.
+                - Mencionar contribuciones destacadas en proyectos.
+                - Incluir métricas de impacto en proyectos personales.
+                - Relacionar logros con objetivos del empleador.
+                """
+                """
+                Ejemplo de salida esperada:
+                Incrementé la eficiencia de procesos en un 30% mediante automatización con Python y Selenium.
+                Desarrollé una plataforma educativa con más de 100 usuarios activos en el primer mes.
+                """
             )
         },
         {
