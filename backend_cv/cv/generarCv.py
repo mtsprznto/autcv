@@ -5,7 +5,6 @@ import os
 from cv.pdf import PDF
 from utils.utils import extraer_lenguajes_unicos, agrupar_lenguajes_por_categoria
 from io import BytesIO
-from pathlib import Path
 
 
 import httpx
@@ -31,47 +30,100 @@ async def subir_cv_a_frontend(buffer: BytesIO, nombre_archivo: str) -> str:
 async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_archivo: str):
     """Genera un CV en PDF con la información de contacto, educación, proyectos y tecnologías."""
     pdf = PDF()
+    pdf.set_auto_page_break(auto=True, margin=30)
+    pdf.tecnologias_experiencia = {
+        "Python": 2,
+        "JavaScript": 1,
+        "FastAPI": 2,
+        "Docker": 2,
+        "Kubernetes": 1,
+        "Terraform": 1,
+        "React": 2,
+        "MySQL": 2,
+        "PostgreSQL": 2,
+        "Cloudflare": 2,
+    }
+    pdf.contacto = {
+        "profesion": "Ingeniería en Ejecución en Informática",
+        "email": "contacto@mtsprz.org",
+        "telefono": "+56 975475781"
+    }
     pdf.add_page()
-    
+
+    # -------------------------
+    # Datos Personales
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 10, "Personal Data", ln=True)
     pdf.set_font("Helvetica", size=10)
+    pdf.multi_cell(0, 6,
+        f"Name: Matias Pérez Nauto\n"
+        f"Phone: +56 975475781\n"
+        f"Email: contacto@mtsprz.org\n"
+        f"Profession: Ingenieria en Ejecución en Informática\n"
+    )
+    pdf.ln(5)
 
-    pdf.cell(0,6,"Puerto Varas - Chile - linkedin.com/in/matiaspereznauto/ - contacto@mtsprz.org", ln=True, align="C")
+    # -------------------------
+    # Summary
+    resumen = (
+    "Desarrollador de software con experiencia en Python, JavaScript, Next.js, PHP, SQL. "
+    "Apasionado por crear soluciones eficientes, seguras y optimizadas, con enfoque en interfaces "
+    "y mejores prácticas. Busco aportar en entornos dinámicos e innovadores."
+    )
 
-    pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
-    
-    pdf.ln(1)
-    #--------------------
-    # DESCRIPCION
-    pdf.ln(3)
-    pdf.set_font("Arial", "I", 10)
-    pdf.multi_cell(0, 6, "Desarrollador de software con experiencia en Python, JavaScript, Next.js, PHP , SQL. Apasionado por crear soluciones eficientes, seguras y optimizadas, con enfoque en interfaces y mejores prácticas. Busco aportar en entornos dinámicos e innovadores.", align="L")
-    pdf.ln(3)
-    #------------------------------------------
-    # Experencia profesional
-    pdf.section_title("Experiencia")
-    for experiencia in experiencias_cv:
+    pdf.section_title("Summary")
+
+    pdf.set_font("Helvetica", size=5)           
+    pdf.set_text_color(100, 100, 100)           
+    pdf.multi_cell(0, 8, resumen, align="L")    
+    pdf.set_text_color(0, 0, 0)                 
+    pdf.ln(5)
+
+    # -------------------------
+    # Consultancy (Experiencias)
+    pdf.section_title("Consultancy")
+    print(f"Experiencia CV: {experiencias_cv}")
+    for exp in experiencias_cv:
+        # Encabezado principal
+        empresa = exp.get("empresa", "")
+        fecha = exp.get("fecha", "")
+        stack = ", ".join(exp.get("stack", []))
         pdf.texto_doble_alineado(
-                izquierda=experiencia["titulo"],
-                derecha="Puerto Varas, Chile"
-            )
-        pdf.paragraph(experiencia["experiencia_cv"])
-        keywords = ", ".join(experiencia["keywords_detectadas"])
-        pdf.sub_paragraph(keywords)
-        pdf.ln(1)
+            izquierda=f"{empresa} ({fecha})",
+            derecha=f"Stack: {stack}"
+        )
 
-    pdf.ln(1)
-    #---------------------------------------------------
+        # Campos principales
+        pdf.paragraph(f"Position: {exp.get('titulo', exp.get('posicion', '')).strip()}")
+        pdf.paragraph(f"Business: {exp.get('business', '')}")
+        pdf.paragraph(f"Scope: {exp.get('scope', exp.get('experiencia_cv', '')).strip()}")
 
-    # Proyectos 
-    pdf.section_title("Proyectos")
-    #print(f"Proyectos destacados: {proyectos_destacados}")
-    # pdf.multi_section(proyectos_destacados)
-    for proyecto in proyectos_destacados:
-        pdf.render_proyecto(proyecto)
+        # Subsecciones limpias
+        if exp.get("cicd"):
+            cicd = ", ".join(exp["cicd"]) if isinstance(exp["cicd"], list) else exp["cicd"]
+            pdf.sub_paragraph(f"CI/CD: {cicd}")
+        if exp.get("observabilidad"):
+            obs = ", ".join(exp["observabilidad"]) if isinstance(exp["observabilidad"], list) else exp["observabilidad"]
+            pdf.sub_paragraph(f"Observability: {obs}")
+        if exp.get("vcs"):
+            vcs = ", ".join(exp["vcs"]) if isinstance(exp["vcs"], list) else exp["vcs"]
+            pdf.sub_paragraph(f"VCS: {vcs}")
+        if exp.get("datasources"):
+            ds = ", ".join(exp["datasources"]) if isinstance(exp["datasources"], list) else exp["datasources"]
+            pdf.sub_paragraph(f"Data Sources: {ds}")
 
-    #------------------------------------------
-    # EDUCACION
-    pdf.section_title("Educación")
+        pdf.ln(3)
+
+
+    # -------------------------
+    # Proyectos
+    # pdf.section_title("Proyectos")
+    # for proyecto in proyectos_destacados:
+    #     pdf.render_proyecto(proyecto)
+
+    # -------------------------
+    # Educación
+    pdf.section_title("Background / Education")
     pdf.texto_doble_alineado(
         izquierda="AIEP, 2024 - 2026",
         derecha="Puerto Varas, Chile"
@@ -82,52 +134,10 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
         izquierda="AIEP, 2026 - 2027",
         derecha="Puerto Varas, Chile"
     )
-    pdf.paragraph("INGENIERÍA DE EJECUCIÓN EN INFORMÁTICA MENCIÓN, DESARROLLO DE SISTEMAS")
-    pdf.ln(1)
+    pdf.paragraph("Ingeniería de Ejecución en Informática, mención Desarrollo de Sistemas")
+    pdf.ln(3)
 
-    #------------------------------------------
-    #------------------------------------------
-    # Habilidades Blandas y Disponibilidad
-    pdf.section_title("Habilidades")
-    pdf.multi_section([
-        "Comunicación | Autoaprendizaje | Trabajo en equipo | Proactividad | Manejo del estrés"
-    ])
-    pdf.ln(1)
-    
-
-    #------------------------------------------
-    # Tecnologías y Conocimientos
-    pdf.section_title("Tecnologías")
-
-    langs = extraer_lenguajes_unicos(proyectos_destacados)
-    #print("Lenguajes únicos detectados:", langs)
-    grupos = agrupar_lenguajes_por_categoria(langs)
-    #print("Grupos de lenguajes:", grupos)
-
-    bloques = []
-    if grupos.get("Frontend"):
-        bloques.append(f"Frontend: {', '.join(grupos['Frontend'])}")
-    if grupos.get("Backend"):
-        bloques.append(f"Backend: {', '.join(grupos['Backend'])}")
-    if grupos.get("Scripting"):
-        bloques.append(f"Scripting: {', '.join(grupos['Scripting'])}")
-    if grupos.get("Otros"):
-        bloques.append(f"Otros: {', '.join(grupos['Otros'])}")
-
-    bloques.extend([
-        "Frameworks: React, Next.js, FastAPI, Flet",
-        "Bases de Datos: MySQL, Oracle, SQL Server",
-        "Herramientas: Visual Studio, VS Code",
-        "Sistemas Operativos: Windows, Linux"
-    ])
-
-    pdf.multi_section(bloques)
-    pdf.ln(1)
-    
-
-    #------------------------------------------
-    pdf.section_title("Disponibilidad")
-    pdf.paragraph("Disponible para trabajar 100% online, presencialmente en Santiago o de forma híbrida. Con disposición para viajar según se requiera.")
+    # -------------------------
 
     # PDF en memoria con BytesIO
     pdf_bytes = pdf.output(dest='S').encode('latin1')

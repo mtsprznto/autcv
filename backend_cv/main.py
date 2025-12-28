@@ -55,8 +55,6 @@ async def obtener_repos():
     return JSONResponse(content=proyectos)
 
 
-
-
 """
 POST
 """

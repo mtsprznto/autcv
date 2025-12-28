@@ -18,9 +18,6 @@ def seleccionar_proyectos(proyectos: list, propuesta: str = "No especificada") -
     """
     client = get_groq_client()
 
-
-
-
     messages = [
         {
             "role": "system",
@@ -41,9 +38,6 @@ def seleccionar_proyectos(proyectos: list, propuesta: str = "No especificada") -
         }
     ]
 
-
-
-
     try:
         chat_completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",  # adaptá a tu modelo disponible
@@ -53,7 +47,7 @@ def seleccionar_proyectos(proyectos: list, propuesta: str = "No especificada") -
         proyectos_seleccionados = json.loads(raw_output)
         return proyectos_seleccionados
     except Exception as e:
-        print(f"❌ Error al generar CV adaptado: {e}")
+        print(f"❌ Error al generar CV adaptado [seleccionar_proyectos]: {e}")
         return "No se pudo adaptar el CV correctamente."
 
 
@@ -73,34 +67,26 @@ def generar_experiencia_desde_readme(propuesta: str, proyectos: list) -> list:
                 "Eres un experto en redacción de currículums técnicos. "
                 "Tu tarea es leer el README de cada proyecto y generar una experiencia profesional adaptada al CV, alineada con la propuesta laboral. "
                 "Extrae palabras clave relevantes y redacta una descripción profesional, clara y orientada al impacto. "
-                "Devuelve un array JSON con: 'titulo', 'experiencia_cv', 'keywords_detectadas'. "
+                "Devuelve un array JSON con los siguientes campos por cada experiencia:\n"
+                " - empresa: nombre de la empresa o proyecto\n"
+                " - fecha: rango de tiempo (ej. May 2024 - Ago 2024)\n"
+                " - titulo: cargo desempeñado\n"
+                " - posicion: rol específico (ej. SRE, Frontend Developer)\n"
+                " - business: sector o tipo de negocio\n"
+                " - experiencia_cv: descripción clara y orientada al impacto\n"
+                " - stack: lista de tecnologías usadas\n"
+                " - cicd: herramientas de CI/CD\n"
+                " - observabilidad: herramientas de monitoreo/observabilidad\n"
+                " - vcs: sistema de control de versiones\n"
+                " - datasources: bases de datos o fuentes de datos\n"
+                " - keywords_detectadas: palabras clave relevantes\n\n"
                 "No incluyas explicaciones ni texto adicional fuera del JSON."
                 "Ten en cuenta lo siguiente:\n"
-                """
-                - Agregar logros medibles en cada experiencia.
-                - Incluir responsabilidades específicas y resultados.
-                - Detallar duración y contexto de cada rol.
-                - Relacionar experiencia con habilidades clave.
-                - Buscar incluir experiencia formal o voluntariados.
-                """
-                """
-                Example output:
-                Desarrollador de Aplicaciones Web (May 2024 - Ago 2024): Implementé plataforma e-commerce con Stripe, aumentando la usabilidad y seguridad.
-                Especialista en Automatización (Mar 2024 - Jun 2024): Optimicé procesos con Python y Selenium, reduciendo tiempos de gestión en un 30%.
-                """
-                "Tambien ten en cuenta:\n"
-                """
-                - Incluir resultados numéricos concretos.
-                - Destacar premios o reconocimientos si existen.
-                - Mencionar contribuciones destacadas en proyectos.
-                - Incluir métricas de impacto en proyectos personales.
-                - Relacionar logros con objetivos del empleador.
-                """
-                """
-                Ejemplo de salida esperada:
-                Incrementé la eficiencia de procesos en un 30% mediante automatización con Python y Selenium.
-                Desarrollé una plataforma educativa con más de 100 usuarios activos en el primer mes.
-                """
+                "- Agregar logros medibles en cada experiencia.\n"
+                "- Incluir responsabilidades específicas y resultados.\n"
+                "- Detallar duración y contexto de cada rol.\n"
+                "- Relacionar experiencia con habilidades clave.\n"
+                "- Buscar incluir experiencia formal o voluntariados.\n"
             )
         },
         {
@@ -182,5 +168,5 @@ def responder_propuesta(proyectos: list, pregunta: str)-> str:
         
         return raw_output
     except Exception as e:
-        print(f"❌ Error al generar CV adaptado: {e}")
+        print(f"❌ Error al generar CV adaptado [responder_propuesta]: {e}")
         return "No se pudo adaptar el CV correctamente."

@@ -1,16 +1,28 @@
 from fpdf import FPDF
+from datetime import datetime
 
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utils.utils import limpiar_texto
-
+from utils.utils import formatear_proyecto, limpiar_texto
 
 class PDF(FPDF):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Guardamos mes y año al instanciar
+        ahora = datetime.now()
+        self.mes = ahora.strftime("%B")   
+        self.año = ahora.strftime("%Y")   
+
+        self.tecnologias_experiencia = {}  # Se setea desde fuera
+        self.contacto = {}
+
     def header(self):
-        self.set_font("Arial", "B", 20)
-        self.cell(0, 14, limpiar_texto("Matías Pérez Nauto"), ln=True, align="C")
+        self.set_font("Arial", "B", 9)
+        self.cell(0, 9, limpiar_texto("Resume"), ln=True, align="R")
+        self.ln(0)
+        self.cell(0, 2, limpiar_texto(f"{self.mes} {self.año} rev"), ln=True, align="R")
         self.ln(2)
 
     def section_title(self, title):
@@ -34,7 +46,7 @@ class PDF(FPDF):
     def sub_paragraph(self, keywords):
         self.set_font("Helvetica", "I", 9)
         self.set_text_color(100, 100, 100)  # Gris suave
-        self.multi_cell(0, 5, f"Tecnologías y conceptos clave: {keywords}", align="L")
+        self.multi_cell(0, 5, f"{keywords}", align="L")
         self.set_text_color(0, 0, 0)  # Restaurar color negro
 
 
@@ -107,6 +119,24 @@ class PDF(FPDF):
 
         self.ln(2)
     
-    
+    def footer(self):
+        self.ln(5)
+        self.set_y(-25)
+        self.set_font("Helvetica", size=7)
+        self.set_text_color(100, 100, 100)
+
+        # Línea superior
+        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+        self.ln(2)
+
+        # Tecnología y años
+        tech_line = ", ".join([f"{k}: {v}" for k, v in self.tecnologias_experiencia.items()])
+        self.multi_cell(0, 4, f"Technology's year experience: {tech_line}", align="L")
+        self.ln(1)
+
+        # Contacto
+        contacto_line = f"{self.contacto['profesion']} | Email: {self.contacto['email']} | Mobile: {self.contacto['telefono']}"
+        self.cell(0, 4, contacto_line, align="L")
+
 
 

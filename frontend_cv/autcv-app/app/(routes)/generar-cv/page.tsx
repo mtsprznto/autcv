@@ -33,7 +33,8 @@ export default function GenerarCv() {
         console.log(user);
         
       } else {
-        router.push("/login"); // 🔐 Redirige si no hay sesión
+        //console.log("no login");
+        router.push("/login"); 
       }
 
       setLoading(false);
