@@ -83,36 +83,53 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
     # Consultancy (Experiencias)
     pdf.section_title("Consultancy")
     print(f"Experiencia CV: {experiencias_cv}")
+
+    col_width = pdf.w / 2 - 20   # ancho de cada columna
+    line_height = 5
+
     for exp in experiencias_cv:
-        # Encabezado principal
         empresa = exp.get("empresa", "")
         fecha = exp.get("fecha", "")
         stack = ", ".join(exp.get("stack", []))
-        pdf.texto_doble_alineado(
-            izquierda=f"{empresa} ({fecha})",
-            derecha=f"Stack: {stack}"
+
+        # Guardar posición inicial
+        y_start = pdf.get_y()
+
+        # Columna izquierda: contexto del rol
+        pdf.set_xy(pdf.l_margin, y_start)
+        left_text = (
+            f"{empresa} ({fecha})\n"
+            f"Position: {exp.get('titulo', exp.get('posicion', '')).strip()}\n"
+            f"Business: {exp.get('business', '')}\n"
+            f"Scope: {exp.get('scope', exp.get('experiencia_cv', '')).strip()}\n"
         )
-
-        # Campos principales
-        pdf.paragraph(f"Position: {exp.get('titulo', exp.get('posicion', '')).strip()}")
-        pdf.paragraph(f"Business: {exp.get('business', '')}")
-        pdf.paragraph(f"Scope: {exp.get('scope', exp.get('experiencia_cv', '')).strip()}")
-
-        # Subsecciones limpias
-        if exp.get("cicd"):
-            cicd = ", ".join(exp["cicd"]) if isinstance(exp["cicd"], list) else exp["cicd"]
-            pdf.sub_paragraph(f"CI/CD: {cicd}")
         if exp.get("observabilidad"):
             obs = ", ".join(exp["observabilidad"]) if isinstance(exp["observabilidad"], list) else exp["observabilidad"]
-            pdf.sub_paragraph(f"Observability: {obs}")
+            left_text += f"Observability: {obs}\n"
+        pdf.multi_cell(col_width, line_height, left_text)
+
+        y_left_end = pdf.get_y()
+
+        # Columna derecha: stack técnico
+        pdf.set_xy(pdf.l_margin + col_width + 10, y_start)
+        right_text = f"Stack: {stack}\n"
+        if exp.get("cicd"):
+            cicd = ", ".join(exp["cicd"]) if isinstance(exp["cicd"], list) else exp["cicd"]
+            right_text += f"CI/CD: {cicd}\n"
         if exp.get("vcs"):
             vcs = ", ".join(exp["vcs"]) if isinstance(exp["vcs"], list) else exp["vcs"]
-            pdf.sub_paragraph(f"VCS: {vcs}")
+            right_text += f"VCS: {vcs}\n"
         if exp.get("datasources"):
             ds = ", ".join(exp["datasources"]) if isinstance(exp["datasources"], list) else exp["datasources"]
-            pdf.sub_paragraph(f"Data Sources: {ds}")
+            right_text += f"Data Sources: {ds}\n"
+        pdf.multi_cell(col_width, line_height, right_text)
 
-        pdf.ln(3)
+        y_right_end = pdf.get_y()
+
+        # Mover cursor al final de la columna más larga
+        pdf.set_y(max(y_left_end, y_right_end) + 5)
+
+
 
 
     # -------------------------
