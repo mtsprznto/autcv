@@ -1,4 +1,5 @@
 
+import os
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -17,6 +18,9 @@ def seleccionar_proyectos(proyectos: list, propuesta: str = "No especificada") -
     para mostrar en el CV según la propuesta dada.
     """
     client = get_groq_client("GROQ_API_KEY_1")
+    model_name = os.getenv("MODEL_1") 
+    if not model_name:
+        raise EnvironmentError("❌ MODEL_1 no está definido en las variables de entorno.")
 
     messages = [
         {
@@ -40,7 +44,7 @@ def seleccionar_proyectos(proyectos: list, propuesta: str = "No especificada") -
 
     try:
         chat_completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",  # adaptá a tu modelo disponible
+            model=model_name,  # adaptá a tu modelo disponible
             messages=messages
         )
         raw_output = chat_completion.choices[0].message.content.strip()
@@ -58,6 +62,9 @@ def generar_experiencia_desde_readme(propuesta: str, proyectos: list) -> list:
     """
     client = get_groq_client("GROQ_API_KEY_2")
 
+    model_name = os.getenv("MODEL_2") 
+    if not model_name:
+        raise EnvironmentError("❌ MODEL_1 no está definido en las variables de entorno.")
 
     messages = [
         {
@@ -100,7 +107,7 @@ def generar_experiencia_desde_readme(propuesta: str, proyectos: list) -> list:
 
     try:
         chat_completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=model_name,
             messages=messages
         )
         raw_output = chat_completion.choices[0].message.content.strip()
