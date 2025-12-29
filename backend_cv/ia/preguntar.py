@@ -16,7 +16,7 @@ def seleccionar_proyectos(proyectos: list, propuesta: str = "No especificada") -
     Analiza una lista completa de proyectos y genera una selección recomendada
     para mostrar en el CV según la propuesta dada.
     """
-    client = get_groq_client()
+    client = get_groq_client("GROQ_API_KEY_1")
 
     messages = [
         {
@@ -56,8 +56,7 @@ def generar_experiencia_desde_readme(propuesta: str, proyectos: list) -> list:
     Genera experiencias profesionales adaptadas al CV usando los README
     y alineadas con la propuesta laboral.
     """
-    client = get_groq_client()
-
+    client = get_groq_client("GROQ_API_KEY_2")
 
 
     messages = [

@@ -5,11 +5,11 @@ from groq import Groq
 # Cargar .env al arrancar
 load_dotenv()
 
-def get_groq_client() -> Groq:
+def get_groq_client(env_var: str = "GROQ_API_KEY") -> Groq:
     """
     Inicializa y devuelve el cliente Groq con validación robusta
     """
-    api_key = os.getenv("GROQ_API_KEY")
+    api_key = os.getenv(env_var)
 
     if not api_key or not api_key.strip():
         raise EnvironmentError("❌ GROQ_API_KEY no fue encontrado o está vacío en las variables de entorno.")
