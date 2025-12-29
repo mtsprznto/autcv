@@ -73,9 +73,9 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
 
     pdf.section_title("Summary")
 
-    pdf.set_font("Helvetica", size=5)           
+    pdf.set_font("Helvetica", size=10)           
     pdf.set_text_color(100, 100, 100)           
-    pdf.multi_cell(0, 8, resumen, align="L")    
+    pdf.multi_cell(0, 6, resumen, align="L")    
     pdf.set_text_color(0, 0, 0)                 
     pdf.ln(5)
 
