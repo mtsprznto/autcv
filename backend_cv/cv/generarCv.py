@@ -126,13 +126,13 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
     pdf.section_title("Background / Education")
     pdf.texto_doble_alineado(
         izquierda="AIEP, 2024 - 2026",
-        derecha="Puerto Varas, Chile"
+        derecha=""
     )
     pdf.paragraph("Programación y Análisis de Sistemas")
     pdf.ln(1)
     pdf.texto_doble_alineado(
         izquierda="AIEP, 2026 - 2027",
-        derecha="Puerto Varas, Chile"
+        derecha=""
     )
     pdf.paragraph("Ingeniería de Ejecución en Informática, mención Desarrollo de Sistemas")
     pdf.ln(3)
