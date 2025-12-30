@@ -25,7 +25,7 @@ async def anadir_readme_proyectos_seleccionados(username: str, proyectos_selecci
             proyecto["readme_raw"] = readme_limpio
             proyectos_enriquecidos_con_readme.append(proyecto)
         except Exception as e:
-            print(f"⚠️ No se pudo obtener README de {proyecto['nombre']}: {str(e)}")
+            print(f"⚠️ No se pudo obtener README de {proyecto['titulo']}: {str(e)}")
             # proyectos_enriquecidos.append(proyecto)  # Lo agregas igual, sin README
     
     return proyectos_enriquecidos_con_readme

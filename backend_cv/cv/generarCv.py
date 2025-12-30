@@ -3,7 +3,7 @@
 from dotenv import load_dotenv
 import os
 from cv.pdf import PDF
-from utils.utils import extraer_lenguajes_unicos, agrupar_lenguajes_por_categoria
+from utils.utils import clean_text
 from io import BytesIO
 
 
@@ -52,9 +52,9 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
 
     # -------------------------
     # Datos Personales
-    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_font("Roboto", "B", 12)
     pdf.cell(0, 10, "Personal Data", ln=True)
-    pdf.set_font("Helvetica", size=10)
+    pdf.set_font("Roboto","", size=10)
     pdf.multi_cell(0, 6,
         f"Name: Matias Pérez Nauto\n"
         f"Phone: +56 975475781\n"
@@ -70,66 +70,55 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
     "Apasionado por crear soluciones eficientes, seguras y optimizadas, con enfoque en interfaces "
     "y mejores prácticas. Busco aportar en entornos dinámicos e innovadores."
     )
-
+    pdf.set_font("Roboto", "B", 12)
     pdf.section_title("Summary")
-
-    pdf.set_font("Helvetica", size=10)           
+    pdf.set_font("Roboto","", size=10)        
     pdf.set_text_color(100, 100, 100)           
     pdf.multi_cell(0, 6, resumen, align="L")    
     pdf.set_text_color(0, 0, 0)                 
     pdf.ln(5)
 
     # -------------------------
-    # Consultancy (Experiencias)
+    # -------------------------
+    # Consultancy (Experiencias) con fpdf2 Tables
+    pdf.set_font("Roboto", "B", 12)
     pdf.section_title("Consultancy")
-    print(f"Experiencia CV: {experiencias_cv}")
-
-    col_width = pdf.w / 2 - 20   # ancho de cada columna
-    line_height = 5
-
+    pdf.set_font("Roboto","", size=10)
     for exp in experiencias_cv:
-        empresa = exp.get("empresa", "")
-        fecha = exp.get("fecha", "")
-        stack = ", ".join(exp.get("stack", []))
+        empresa = clean_text(exp.get("empresa", ""))
+        fecha = clean_text(exp.get("fecha", ""))
+        # Calculamos el ancho útil de la página
+        # Creamos una tabla sin bordes para el layout de 2 columnas
+        # col_widths es el porcentaje de ancho (50% y 50%)
+        with pdf.table(
+            col_widths=(50, 50),
+            borders_layout="NONE", 
+            line_height=5,
+        ) as table:
+            row = table.row()
+            # Celda Izquierda
+            left_content = (
+                f"{empresa} ({fecha})\n"
+                f"Position: {exp.get('titulo', '').strip()}\n"
+                f"Business: {exp.get('business', '')}\n"
+                f"Scope: {exp.get('experiencia_cv', '').strip()}"
+            )
+            row.cell(left_content, v_align="T")
 
-        # Guardar posición inicial
-        y_start = pdf.get_y()
+            # Celda Derecha
+            stack = ", ".join(exp.get("stack", []))
+            right_content = f"Stack: {stack}\n"
+            if exp.get("cicd"):
+                val = exp["cicd"]
+                right_content += f"CI/CD: {', '.join(val) if isinstance(val, list) else val}\n"
+            
+            if exp.get("datasources"):
+                val = exp["datasources"]
+                right_content += f"Data Sources: {', '.join(val) if isinstance(val, list) else val}"
+                
+            row.cell(right_content, v_align="T")
 
-        # Columna izquierda: contexto del rol
-        pdf.set_xy(pdf.l_margin, y_start)
-        left_text = (
-            f"{empresa} ({fecha})\n"
-            f"Position: {exp.get('titulo', exp.get('posicion', '')).strip()}\n"
-            f"Business: {exp.get('business', '')}\n"
-            f"Scope: {exp.get('scope', exp.get('experiencia_cv', '')).strip()}\n"
-        )
-        if exp.get("observabilidad"):
-            obs = ", ".join(exp["observabilidad"]) if isinstance(exp["observabilidad"], list) else exp["observabilidad"]
-            left_text += f"Observability: {obs}\n"
-        pdf.multi_cell(col_width, line_height, left_text)
-
-        y_left_end = pdf.get_y()
-
-        # Columna derecha: stack técnico
-        pdf.set_xy(pdf.l_margin + col_width + 10, y_start)
-        right_text = f"Stack: {stack}\n"
-        if exp.get("cicd"):
-            cicd = ", ".join(exp["cicd"]) if isinstance(exp["cicd"], list) else exp["cicd"]
-            right_text += f"CI/CD: {cicd}\n"
-        if exp.get("vcs"):
-            vcs = ", ".join(exp["vcs"]) if isinstance(exp["vcs"], list) else exp["vcs"]
-            right_text += f"VCS: {vcs}\n"
-        if exp.get("datasources"):
-            ds = ", ".join(exp["datasources"]) if isinstance(exp["datasources"], list) else exp["datasources"]
-            right_text += f"Data Sources: {ds}\n"
-        pdf.multi_cell(col_width, line_height, right_text)
-
-        y_right_end = pdf.get_y()
-
-        # Mover cursor al final de la columna más larga
-        pdf.set_y(max(y_left_end, y_right_end) + 5)
-
-
+        pdf.ln(5) # Espacio entre experiencias
 
 
     # -------------------------
@@ -157,7 +146,7 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
     # -------------------------
 
     # PDF en memoria con BytesIO
-    pdf_bytes = pdf.output(dest='S').encode('latin1')
+    pdf_bytes = pdf.output()
     buffer = BytesIO(pdf_bytes)
     buffer.seek(0)      # Posicionamos al inicio para lectura
 

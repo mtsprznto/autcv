@@ -1,3 +1,4 @@
+import json
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -70,21 +71,25 @@ async def recibir_propuesta(payload: PropuestaInput):
         
         # aqui se genera con groq (IA)
         proyectos_seleccionados = seleccionar_proyectos(proyectos, payload.normalizada())
-        
+        # Aplanar proyectos seleccionados
+        proyectos_seleccionados_flat = [p[0] if isinstance(p, list) else p for p in proyectos_seleccionados]
+
         #obtener readme raw
-        proyectos_seleccionados_readme = await anadir_readme_proyectos_seleccionados(username, proyectos_seleccionados)
+        proyectos_seleccionados_readme = await anadir_readme_proyectos_seleccionados(username, proyectos_seleccionados_flat)
         
         for proyecto in proyectos_seleccionados_readme:
             proyecto["readme_raw"] = preparar_readme_para_modelo(proyecto["readme_raw"])
 
         # Objetivo: es pasarle a un agente y que me seleccione las palabras claves dependiendo de la propuesta ingresada
         experiencias_cv = generar_experiencia_desde_readme(payload.normalizada(), proyectos_seleccionados_readme)
+        
         for proyecto, experiencia in zip(proyectos_seleccionados_readme, experiencias_cv):
             proyecto["experiencia_cv"] = experiencia["experiencia_cv"]
             proyecto["keywords_detectadas"] = experiencia["keywords_detectadas"]
-        
-        url_pdf = await generar_cv(proyectos_seleccionados,experiencias_cv ,"CV_Matias_Perez_Nauto.pdf")
-        
+
+        # Usar esta lista en el resto del flujo
+        url_pdf = await generar_cv(proyectos_seleccionados_flat, experiencias_cv, "CV_Matias_Perez_Nauto.pdf")
+
         return JSONResponse(content={
             "cv_url": url_pdf
         })

@@ -5,11 +5,11 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 
+from utils.utils import chunk_text
 from ia.connect import get_groq_client
 import json
 
-
-
+import re
 
 
 def seleccionar_proyectos(proyectos: list, propuesta: str = "No especificada") -> str:
@@ -21,38 +21,47 @@ def seleccionar_proyectos(proyectos: list, propuesta: str = "No especificada") -
     model_name = os.getenv("MODEL_1") 
     if not model_name:
         raise EnvironmentError("❌ MODEL_1 no está definido en las variables de entorno.")
+    # Serializar proyectos a texto
+    proyectos_json = json.dumps(proyectos, ensure_ascii=False, indent=2)
 
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "Eres un asistente técnico especializado en selección de proyectos para currículums. "
-                "Tu tarea es analizar una propuesta laboral y devolver una lista en formato JSON con los proyectos más relevantes "
-                "para mostrar en el CV. Usa exclusivamente el formato original que se te proporciona, sin modificar los campos ni agregar nuevos. "
-                "Tu única salida debe ser un array JSON con los objetos seleccionados, sin explicaciones ni texto adicional."
-            )
-        },
-        {
-            "role": "user",
-            "content": (
-                f"Propuesta laboral:\n{propuesta}\n\n"
-                f"Lista de proyectos (estructura original):\n{json.dumps(proyectos, ensure_ascii=False, indent=2)}\n\n"
-                "Selecciona los más relevantes para incluir en el CV y devuélvelos en formato JSON."
-            )
-        }
-    ]
+    chunks = chunk_text(proyectos_json, max_tokens=2000)
+    proyectos_seleccionados = []
 
-    try:
-        chat_completion = client.chat.completions.create(
-            model=model_name,  # adaptá a tu modelo disponible
-            messages=messages
-        )
-        raw_output = chat_completion.choices[0].message.content.strip()
-        proyectos_seleccionados = json.loads(raw_output)
-        return proyectos_seleccionados
-    except Exception as e:
-        print(f"❌ Error al generar CV adaptado [seleccionar_proyectos]: {e}")
-        return "No se pudo adaptar el CV correctamente."
+
+    for i, chunk in enumerate(chunks, start=1):
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "Eres un asistente técnico especializado en selección de proyectos para currículums. "
+                    "Tu tarea es analizar una propuesta laboral y devolver una lista en formato JSON con los proyectos más relevantes "
+                    "para mostrar en el CV. Usa exclusivamente el formato original que se te proporciona, sin modificar los campos ni agregar nuevos. "
+                    "Tu única salida debe ser un array JSON con los objetos seleccionados, sin explicaciones ni texto adicional."
+                )
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Propuesta laboral:\n{propuesta}\n\n"
+                    f"Chunk {i} de proyectos:\n{chunk}\n\n"
+                    "Selecciona los más relevantes para incluir en el CV y devuélvelos en formato JSON."
+                )
+            }
+        ]
+
+        try:
+            chat_completion = client.chat.completions.create(
+                model=model_name,
+                messages=messages
+            )
+            raw_output = chat_completion.choices[0].message.content.strip()
+            seleccion_chunk = json.loads(raw_output)
+            proyectos_seleccionados.extend(seleccion_chunk)
+        except Exception as e:
+            print(f"❌ Error al procesar chunk {i}: {e}")
+
+    return proyectos_seleccionados
+
 
 
 def generar_experiencia_desde_readme(propuesta: str, proyectos: list) -> list:
@@ -64,71 +73,84 @@ def generar_experiencia_desde_readme(propuesta: str, proyectos: list) -> list:
 
     model_name = os.getenv("MODEL_2") 
     if not model_name:
-        raise EnvironmentError("❌ MODEL_1 no está definido en las variables de entorno.")
+        raise EnvironmentError("❌ MODEL_2 no está definido en las variables de entorno.")
+    experiencias_adaptadas = []
 
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "Eres un experto en redacción de currículums técnicos. "
-                "Tu tarea es leer el README de cada proyecto y generar una experiencia profesional adaptada al CV, alineada con la propuesta laboral. "
-                "Extrae palabras clave relevantes y redacta una descripción profesional, clara y orientada al impacto. "
-                "Devuelve un array JSON con los siguientes campos por cada experiencia:\n"
-                " - empresa: nombre de la empresa o proyecto\n"
-                " - fecha: rango de tiempo (ej. May 2024 - Ago 2024)\n"
-                " - titulo: cargo desempeñado\n"
-                " - posicion: rol específico (ej. SRE, Frontend Developer)\n"
-                " - business: sector o tipo de negocio\n"
-                " - experiencia_cv: descripción clara y orientada al impacto\n"
-                " - stack: lista de tecnologías usadas\n"
-                " - cicd: herramientas de CI/CD\n"
-                " - observabilidad: herramientas de monitoreo/observabilidad\n"
-                " - vcs: sistema de control de versiones\n"
-                " - datasources: bases de datos o fuentes de datos\n"
-                " - keywords_detectadas: palabras clave relevantes\n\n"
-                "No incluyas explicaciones ni texto adicional fuera del JSON."
-                "Ten en cuenta lo siguiente:\n"
-                "- Agregar logros medibles en cada experiencia.\n"
-                "- Incluir responsabilidades específicas y resultados.\n"
-                "- Detallar duración y contexto de cada rol.\n"
-                "- Relacionar experiencia con habilidades clave.\n"
-                "- Buscar incluir experiencia formal o voluntariados.\n"
-            )
-        },
-        {
-            "role": "user",
-            "content": (
-                f"Propuesta laboral:\n{propuesta}\n\n"
-                f"Proyectos con README:\n{json.dumps(proyectos, ensure_ascii=False, indent=2)}\n\n"
-                "Devuélveme el array JSON con las experiencias adaptadas para el CV."
-            )
-        }
-    ]
 
-    try:
-        chat_completion = client.chat.completions.create(
-            model=model_name,
-            messages=messages
-        )
-        raw_output = chat_completion.choices[0].message.content.strip()
-        # 🧹 Eliminar delimitadores Markdown si existen
-        if raw_output.startswith("```json"):
-            raw_output = raw_output.replace("```json", "").strip()
-        if raw_output.endswith("```"):
-            raw_output = raw_output[:-3].strip()
-        print("RAW RESPUESTA", raw_output)
-        # 🧪 Intentar parsear
+    # Procesar cada proyecto individualmente para no superar el límite de tokens
+    for proyecto in proyectos:
+        proyecto_json = json.dumps(proyecto, ensure_ascii=False, indent=2)
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "Eres un experto en redacción de currículums técnicos. "
+                    "Tu tarea es leer el README de cada proyecto y generar una experiencia profesional adaptada al CV, alineada con la propuesta laboral. "
+                    "Extrae palabras clave relevantes y redacta una descripción profesional, clara y orientada al impacto. "
+                    "Tu única salida debe ser SOLO un objeto JSON válido. No escribas nada antes ni después."
+                    "Devuelve un array JSON con los siguientes campos por cada experiencia:\n"
+                    " - empresa: nombre de la empresa o proyecto\n"
+                    " - fecha: rango de tiempo (ej. May 2024 - Ago 2024)\n"
+                    " - titulo: cargo desempeñado\n"
+                    " - posicion: rol específico (ej. SRE, Frontend Developer)\n"
+                    " - business: sector o tipo de negocio\n"
+                    " - experiencia_cv: descripción clara y orientada al impacto\n"
+                    " - stack: lista de tecnologías usadas\n"
+                    " - cicd: herramientas de CI/CD\n"
+                    " - observabilidad: herramientas de monitoreo/observabilidad\n"
+                    " - vcs: sistema de control de versiones\n"
+                    " - datasources: bases de datos o fuentes de datos\n"
+                    " - keywords_detectadas: palabras clave relevantes\n\n"
+                    "No incluyas explicaciones ni texto adicional fuera del JSON."
+                    "Ten en cuenta lo siguiente:\n"
+                    "- Agregar logros medibles en cada experiencia.\n"
+                    "- Incluir responsabilidades específicas y resultados.\n"
+                    "- Detallar duración y contexto de cada rol.\n"
+                    "- Relacionar experiencia con habilidades clave.\n"
+                    "- Buscar incluir experiencia formal o voluntariados.\n"
+                )
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Propuesta laboral:\n{propuesta}\n\n"
+                    f"Proyecto con README:\n{proyecto_json}\n\n"
+                    "Devuélveme el objeto JSON con la experiencia adaptada para el CV."
+                )
+            }
+        ]
+
         try:
-            experiencias_adaptadas = json.loads(raw_output)
-            return experiencias_adaptadas
-        except Exception as e:
-            print("❌ JSON malformado. Contenido recibido:")
-            print(raw_output)
-            raise e
+            chat_completion = client.chat.completions.create(
+                model=model_name,
+                messages=messages
+            )
+            raw_output = chat_completion.choices[0].message.content.strip()
+            print("RAW OUTPUT:", repr(raw_output))
+            match = re.search(r"```json\s*(\{.*?\})\s*```", raw_output, re.DOTALL)
+            if match:
+                json_str = match.group(1).strip()
+            else:
+                # Si no hay delimitadores, intenta parsear directamente
+                json_str = raw_output.strip()
+            if not json_str:
+                print(f"⚠️ Salida vacía para proyecto {proyecto.get('empresa','?')}")
+                continue
 
-    except Exception as e:
-        print(f"❌ Error al generar experiencias desde README: {e}")
-        return []
+
+            try:
+                experiencia = json.loads(json_str)
+                experiencias_adaptadas.append(experiencia)
+            except json.JSONDecodeError as e:
+                print(f"❌ JSON malformado para proyecto {proyecto.get('empresa','?')}: {e}")
+                print("Contenido recibido:", json_str)
+                continue
+        except Exception as e:
+            print(f"❌ Error al procesar proyecto {proyecto.get('empresa','?')}: {e}")
+
+    return experiencias_adaptadas
+
 
 
 def responder_propuesta(proyectos: list, pregunta: str)-> str:

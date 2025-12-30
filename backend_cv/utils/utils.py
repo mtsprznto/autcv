@@ -11,6 +11,37 @@ def limpiar_texto(texto: str) -> str:
             .decode("latin-1")
     )
 
+def limpiar_texto_u(txt: str) -> str:
+    if not isinstance(txt, str):
+        return txt
+    return (
+        txt.replace("\u202f", " ")   # narrow no-break space → espacio normal
+           .replace("\u2011", "-")  # non-breaking hyphen → guion normal
+           .replace("‑", "-")       # otro guion especial → guion normal
+           .replace("\u2013", "-")  # en dash → guion normal
+    )
+
+def clean_text(text):
+    if not text: return ""
+    # Reemplaza el guion largo por uno normal y otros caracteres comunes de copiado/pegado
+    return text.replace("–", "-").replace("—", "-").replace("‘", "'").replace("’", "'").replace("“", '"').replace("”", '"')
+
+def chunk_text(text, max_tokens=2000):
+    words = text.split()
+    chunks = []
+    current = []
+    count = 0
+    for w in words:
+        count += len(w) // 4  # aproximación de tokens
+        current.append(w)
+        if count >= max_tokens:
+            chunks.append(" ".join(current))
+            current = []
+            count = 0
+    if current:
+        chunks.append(" ".join(current))
+    return chunks
+
 
 import re
 
