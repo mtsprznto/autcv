@@ -12,8 +12,8 @@ class PDF(FPDF):
         super().__init__(*args, **kwargs)
         # 1. Registro de la fuente Unicode (Asegúrate que la ruta sea correcta)
         # Registramos Roboto1 para estilo normal y negrita
-        self.add_font("Roboto", style="", fname="fonts/Roboto-Regular.ttf")
-        self.add_font("Roboto", style="B", fname="fonts/Roboto-Bold.ttf")
+        self.add_font("Roboto", style="", fname="fonts/Roboto-Regular.ttf", uni=True)
+        self.add_font("Roboto", style="B", fname="fonts/Roboto-Bold.ttf", uni=True)
 
         # Guardamos mes y año al instanciar
         ahora = datetime.now()
