@@ -1,6 +1,6 @@
 fastapi[standard]
 groq
 python-dotenv
-fpdf
+fpdf2==2.8.5
 requests
 httpx
