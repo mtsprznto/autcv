@@ -7,19 +7,19 @@ def limpiar_texto(texto: str) -> str:
         texto.replace("–", "-")
             .replace("“", '"').replace("”", '"')
             .replace("‘", "'").replace("’", "'")
-            .encode("latin-1", "ignore")
-            .decode("latin-1")
     )
 
 def limpiar_texto_u(txt: str) -> str:
     if not isinstance(txt, str):
         return txt
-    return (
-        txt.replace("\u202f", " ")   # narrow no-break space → espacio normal
-           .replace("\u2011", "-")  # non-breaking hyphen → guion normal
-           .replace("‑", "-")       # otro guion especial → guion normal
-           .replace("\u2013", "-")  # en dash → guion normal
+    return (txt
+        .replace("\u202f", " ")
+        .replace("\u2011", "-")
+        .replace("‑", "-")
+        .replace("\u2013", "-")
+        .replace("\xa6", "")  # elimina el caracter conflictivo
     )
+
 
 def clean_text(text):
     if not text: return ""
