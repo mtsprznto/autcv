@@ -3,7 +3,7 @@
 from dotenv import load_dotenv
 import os
 from cv.pdf import PDF
-from utils.utils import clean_text
+from utils.utils import clean_text, limpiar_texto_u
 from io import BytesIO
 
 
@@ -85,8 +85,13 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
     pdf.section_title("Consultancy")
     pdf.set_font("Roboto","", size=10)
     for exp in experiencias_cv:
-        empresa = clean_text(exp.get("empresa", ""))
-        fecha = clean_text(exp.get("fecha", ""))
+        empresa = limpiar_texto_u(exp.get("empresa", ""))
+        fecha = limpiar_texto_u(exp.get("fecha", ""))
+        titulo = limpiar_texto_u(exp.get("titulo", "").strip())
+        business = limpiar_texto_u(exp.get("business", ""))
+        scope = limpiar_texto_u(exp.get("experiencia_cv", "").strip())
+
+
         # Calculamos el ancho útil de la página
         # Creamos una tabla sin bordes para el layout de 2 columnas
         # col_widths es el porcentaje de ancho (50% y 50%)
@@ -99,23 +104,25 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
             # Celda Izquierda
             left_content = (
                 f"{empresa} ({fecha})\n"
-                f"Position: {exp.get('titulo', '').strip()}\n"
-                f"Business: {exp.get('business', '')}\n"
-                f"Scope: {exp.get('experiencia_cv', '').strip()}"
+                f"Position: {titulo}\n"
+                f"Business: {business}\n"
+                f"Scope: {scope}"
             )
+
             row.cell(left_content, v_align="T")
 
             # Celda Derecha
-            stack = ", ".join(exp.get("stack", []))
+            stack = ", ".join([limpiar_texto_u(s) for s in exp.get("stack", [])])
             right_content = f"Stack: {stack}\n"
+
             if exp.get("cicd"):
                 val = exp["cicd"]
-                right_content += f"CI/CD: {', '.join(val) if isinstance(val, list) else val}\n"
-            
+                right_content += f"CI/CD: {', '.join(val) if isinstance(val, list) else limpiar_texto_u(val)}\n"
             if exp.get("datasources"):
                 val = exp["datasources"]
-                right_content += f"Data Sources: {', '.join(val) if isinstance(val, list) else val}"
-                
+                right_content += f"Data Sources: {', '.join(val) if isinstance(val, list) else limpiar_texto_u(val)}"
+
+
             row.cell(right_content, v_align="T")
 
         pdf.ln(5) # Espacio entre experiencias
