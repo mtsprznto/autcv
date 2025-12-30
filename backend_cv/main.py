@@ -1,4 +1,5 @@
 import json
+import traceback
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +11,7 @@ from models.PropuestaInput import PropuestaInput
 from models.PreguntaInput import PreguntaInput
 
 from utils.obtener_proyectos_actualizados import obtener_proyectos_actualizados, anadir_readme_proyectos_seleccionados
-from utils.utils import preparar_readme_para_modelo
+from utils.utils import limpiar_texto_u, preparar_readme_para_modelo
 
 from ia.preguntar import seleccionar_proyectos, responder_propuesta, generar_experiencia_desde_readme
 
@@ -81,8 +82,12 @@ async def recibir_propuesta(payload: PropuestaInput):
             proyecto["readme_raw"] = preparar_readme_para_modelo(proyecto["readme_raw"])
 
         # Objetivo: es pasarle a un agente y que me seleccione las palabras claves dependiendo de la propuesta ingresada
-        experiencias_cv = generar_experiencia_desde_readme(payload.normalizada(), proyectos_seleccionados_readme)
-        
+        #experiencias_cv = generar_experiencia_desde_readme(payload.normalizada(), proyectos_seleccionados_readme)
+        experiencias_cv = [
+            {k: limpiar_texto_u(v) if isinstance(v, str) else v for k, v in exp.items()}
+            for exp in generar_experiencia_desde_readme(payload.normalizada(), proyectos_seleccionados_readme)
+        ]
+
         for proyecto, experiencia in zip(proyectos_seleccionados_readme, experiencias_cv):
             proyecto["experiencia_cv"] = experiencia["experiencia_cv"]
             proyecto["keywords_detectadas"] = experiencia["keywords_detectadas"]
@@ -95,6 +100,7 @@ async def recibir_propuesta(payload: PropuestaInput):
         })
     except Exception as e:
         print("❌ ERROR INTERNO:", str(e))
+        print(traceback.format_exc())
         return JSONResponse(status_code=500, content={"error": "Fallo interno en propuesta"})
 
 
