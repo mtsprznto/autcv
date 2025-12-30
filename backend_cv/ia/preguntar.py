@@ -142,7 +142,12 @@ def generar_experiencia_desde_readme(propuesta: str, proyectos: list) -> list:
 
             try:
                 experiencia = json.loads(json_str)
-                experiencias_adaptadas.append(experiencia)
+                if isinstance(experiencia, list):
+                    experiencias_adaptadas.extend(experiencia)  # añadir todos los objetos
+                elif isinstance(experiencia, dict):
+                    experiencias_adaptadas.append(experiencia)
+                else:
+                    print("⚠️ Tipo inesperado:", type(experiencia))
             except json.JSONDecodeError as e:
                 print(f"❌ JSON malformado para proyecto {proyecto.get('empresa','?')}: {e}")
                 print("Contenido recibido:", repr(json_str))
