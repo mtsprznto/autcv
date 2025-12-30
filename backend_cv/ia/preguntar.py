@@ -127,13 +127,14 @@ def generar_experiencia_desde_readme(propuesta: str, proyectos: list) -> list:
                 messages=messages
             )
             raw_output = chat_completion.choices[0].message.content.strip()
-            print("RAW OUTPUT:", repr(raw_output))
-            match = re.search(r"```json\s*(\{.*?\})\s*```", raw_output, re.DOTALL)
+            match = re.search(r"```json\s*(\[.*?\]|\{.*?\})\s*```", raw_output, re.DOTALL)
+
             if match:
                 json_str = match.group(1).strip()
             else:
                 # Si no hay delimitadores, intenta parsear directamente
                 json_str = raw_output.strip()
+                json_str = json_str.strip("`")
             if not json_str:
                 print(f"⚠️ Salida vacía para proyecto {proyecto.get('empresa','?')}")
                 continue
@@ -144,7 +145,7 @@ def generar_experiencia_desde_readme(propuesta: str, proyectos: list) -> list:
                 experiencias_adaptadas.append(experiencia)
             except json.JSONDecodeError as e:
                 print(f"❌ JSON malformado para proyecto {proyecto.get('empresa','?')}: {e}")
-                print("Contenido recibido:", json_str)
+                print("Contenido recibido:", repr(json_str))
                 continue
         except Exception as e:
             print(f"❌ Error al procesar proyecto {proyecto.get('empresa','?')}: {e}")
