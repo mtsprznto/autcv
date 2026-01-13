@@ -26,7 +26,7 @@ class PDF(FPDF):
 
     def header(self):
         self.set_font("Arial", "B", 9)
-        self.cell(0, 9, limpiar_texto("Resume"), ln=True, align="R")
+        self.cell(0, 9, limpiar_texto("Currículum"), ln=True, align="R")
         self.ln(0)
         self.cell(0, 2, limpiar_texto(f"{self.mes} {self.año} rev"), ln=True, align="R")
         self.ln(2)
@@ -137,11 +137,11 @@ class PDF(FPDF):
 
         # Tecnología y años
         tech_line = ", ".join([f"{k}: {v}" for k, v in self.tecnologias_experiencia.items()])
-        self.multi_cell(0, 4, f"Technology's year experience: {tech_line}", align="L")
+        self.multi_cell(0, 4, f"Año de experiencia en tecnología: {tech_line}", align="L")
         self.ln(1)
 
         # Contacto
-        contacto_line = f"{self.contacto['profesion']} | Email: {self.contacto['email']} | Mobile: {self.contacto['telefono']}"
+        contacto_line = f"{self.contacto['profesion']} | Email: {self.contacto['email']} | Teléfono: {self.contacto['telefono']}"
         self.cell(0, 4, contacto_line, align="L")
 
 
