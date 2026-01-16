@@ -198,7 +198,7 @@ async def generar_cv(proyectos_destacados: list,experiencias_cv:list , nombre_ar
     pdf.ln(1)
 
     pdf.texto_doble_alineado(
-        izquierda="Anthtopic, 2025",
+        izquierda="Anthropic, 2025",
         derecha=""
     )
     pdf.paragraph("Claude Code in Action")
