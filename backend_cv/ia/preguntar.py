@@ -182,7 +182,7 @@ async def generar_experiencia_desde_readme_async(propuesta: str, proyectos: list
     
     return experiencias_finales
 
-sem = asyncio.Semaphore(3)
+sem = asyncio.Semaphore(2)
 
 async def procesar_un_proyecto_ia(client: AsyncGroq, model_name: str, propuesta: str, proyecto: dict):
     """Lógica para procesar un único proyecto con la IA."""
