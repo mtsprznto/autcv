@@ -32,6 +32,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],                    # ["GET", "POST", ...] si querés limitar
     allow_headers=["*"],                    # ["Content-Type", "Authorization", ...]
+    expose_headers=["*"]
 )
 
 
