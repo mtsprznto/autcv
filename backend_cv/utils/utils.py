@@ -20,6 +20,26 @@ def limpiar_texto_u(txt: str) -> str:
         .replace("\xa6", "")  # elimina el caracter conflictivo
     )
 
+def extraer_y_limpiar_json(raw_output: str) -> dict:
+    """Elimina tags <think> y limpia caracteres conflictivos antes de parsear."""
+    # 1. Eliminar pensamientos de modelos tipo DeepSeek/Ollama
+    texto_sin_think = re.sub(r"<think>.*?</think>", "", raw_output, flags=re.DOTALL)
+    
+    # 2. Buscar el bloque JSON (ya sea { } o [ ])
+    match = re.search(r"(\{.*\}|\[.*\])", texto_sin_think, re.DOTALL)
+    if not match:
+        return None
+        
+    json_str = match.group(1).strip()
+    
+    # 3. Aplicar tu limpieza de caracteres especiales (\xa6, etc.)
+    json_str = limpiar_texto_u(json_str)
+    
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        return None
+
 
 def clean_text(text):
     if not text: return ""
@@ -128,13 +148,6 @@ def agregar_proyecto_al_json(proyecto: dict, ruta: str = "./data/json/proyectos_
 
     if not ya_existe:
         proyectos.append(proyecto)
-        print("GUARDANDO PROYECTOS")
-        """
-        AQUI DEBERIA LLAMAR A MI UTILS QUE SE CONECTA CON MI API DE MI FRONTEND PARA SUBIR EL JSON A BLOBVERCE
-        """
-        # with open(ruta_json, "w", encoding="utf-8") as f:
-        #     json.dump(proyectos, f, ensure_ascii=False, indent=2)
-        print(f"✅ Proyecto '{proyecto['repositorio']}' agregado correctamente.")
     else:
         print(f"ℹ️ El proyecto '{proyecto['repositorio']}' ya existe en el archivo.")
 
@@ -148,7 +161,6 @@ def agregar_proyecto(proyecto: dict):
     ya_existe = any(p.get("repositorio") == proyecto["repositorio"] for p in proyectos)
     if not ya_existe:
         proyectos.append(proyecto)
-        print(f"✅ Proyecto '{proyecto['repositorio']}' agregado correctamente.")
     else:
         print(f"ℹ️ El proyecto '{proyecto['repositorio']}' ya existe en el archivo.")
     
@@ -240,3 +252,12 @@ def agrupar_lenguajes_por_categoria(lenguajes: list) -> dict:
 
     # Ordenar alfabéticamente
     return {k: sorted(set(v)) for k, v in grupos.items() if v}
+
+def limpiar_respuesta_json(text):
+    # Elimina todo lo que esté dentro de etiquetas <think>
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    # Busca el primer '{' y el último '}' para extraer solo el objeto
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        return json.loads(match.group())
+    raise ValueError("No se encontró un JSON válido en la respuesta")

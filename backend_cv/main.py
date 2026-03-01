@@ -1,4 +1,5 @@
 import json
+import time
 import traceback
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -10,10 +11,11 @@ from cv.generarCv import generar_cv
 from models.PropuestaInput import PropuestaInput
 from models.PreguntaInput import PreguntaInput
 
+from utils.obtener_proyectos_cache import obtener_proyectos_con_cache
 from utils.obtener_proyectos_actualizados import obtener_proyectos_actualizados, anadir_readme_proyectos_seleccionados
 from utils.utils import limpiar_texto_u, preparar_readme_para_modelo
 
-from ia.preguntar import seleccionar_proyectos, responder_propuesta, generar_experiencia_desde_readme
+from ia.preguntar import generar_experiencia_desde_readme_async, seleccionar_proyectos, responder_propuesta, generar_experiencia_desde_readme
 
 
 
@@ -65,41 +67,93 @@ async def recibir_propuesta(payload: PropuestaInput):
     """
     Recibe una propuesta laboral y devuelve una lista de proyectos seleccionados.
     """
+    inicio_total = time.perf_counter()
+
     try:
+        # ====================================================================
+        # ====================================================================
+        # ====================================================================
+        t0 = time.perf_counter()
+        
         # proyectos seleccionados
         # aqui viene groq
-        proyectos = await obtener_proyectos_actualizados(username)
-        
+        #proyectos = await obtener_proyectos_actualizados(username)
+        proyectos =  await obtener_proyectos_con_cache(username)
+        print(f"⏱️ Obtener proyectos: {time.perf_counter() - t0:.2f}s | Total: {len(proyectos)}")
+        # ====================================================================
+        # ====================================================================
+        # ====================================================================
+        t1 = time.perf_counter()
         # aqui se genera con groq (IA)
         proyectos_seleccionados = seleccionar_proyectos(proyectos, payload.normalizada())
+        print(f"⏱️ Selección (IA): {time.perf_counter() - t1:.2f}s | Seleccionados: {len(proyectos_seleccionados)}")
+        
+
         # Aplanar proyectos seleccionados
         proyectos_seleccionados_flat = [p[0] if isinstance(p, list) else p for p in proyectos_seleccionados]
-
+        # ====================================================================
+        # ====================================================================
+        # ====================================================================
+        t2 = time.perf_counter()
         #obtener readme raw
         proyectos_seleccionados_readme = await anadir_readme_proyectos_seleccionados(username, proyectos_seleccionados_flat)
-        
+        print(f"⏱️ Fetch Readmes: {time.perf_counter() - t2:.2f}s")
+
+
         for proyecto in proyectos_seleccionados_readme:
             proyecto["readme_raw"] = preparar_readme_para_modelo(proyecto["readme_raw"])
 
-        # Objetivo: es pasarle a un agente y que me seleccione las palabras claves dependiendo de la propuesta ingresada
-        #experiencias_cv = generar_experiencia_desde_readme(payload.normalizada(), proyectos_seleccionados_readme)
-        experiencias_cv = [
-            {k: limpiar_texto_u(v) if isinstance(v, str) else v for k, v in exp.items()}
-            for exp in generar_experiencia_desde_readme(payload.normalizada(), proyectos_seleccionados_readme)
-        ]
+        # ====================================================================
+        # ====================================================================
+        # ====================================================================
+        t3 = time.perf_counter()
 
-        for proyecto, experiencia in zip(proyectos_seleccionados_readme, experiencias_cv):
-            proyecto["experiencia_cv"] = experiencia["experiencia_cv"]
-            proyecto["keywords_detectadas"] = experiencia["keywords_detectadas"]
 
+        experiencias_cv_raw = await generar_experiencia_desde_readme_async(
+            payload.normalizada(), 
+            proyectos_seleccionados_readme
+        )
+
+        experiencias_cv = []
+        proyectos_finales = [] # Lista auxiliar para los que sí tienen experiencia
+
+        # 2. Mapeo seguro con validación
+        for proyecto, exp_raw in zip(proyectos_seleccionados_readme, experiencias_cv_raw):
+            if exp_raw:
+                # Limpieza de caracteres unicode (\xa6, etc.)
+                exp_limpia = {k: limpiar_texto_u(v) if isinstance(v, str) else v for k, v in exp_raw.items()}
+                
+                # Asignamos los datos al objeto proyecto
+                proyecto["experiencia_cv"] = exp_limpia.get("experiencia_cv", "Sin descripción generada.")
+                proyecto["keywords_detectadas"] = exp_limpia.get("keywords_detectadas", [])
+                
+                experiencias_cv.append(exp_limpia)
+                proyectos_finales.append(proyecto)
+                
+                # DEBUGGER: Siempre útil en FIE para rastrear qué se generó
+                print(f"✅ [DEBUG] Experiencia generada para: {proyecto.get('name') or proyecto.get('empresa')}")
+            else:
+                print(f"⚠️ [DEBUG] Falló la generación para proyecto: {proyecto.get('name')}")
+
+        print(f"⏱️ Generar experiencias (IA Paralela): {time.perf_counter() - t3:.2f}s")
+        
+        # ====================================================================
+        # ====================================================================
+        # ====================================================================
+        t4 = time.perf_counter()
         # Usar esta lista en el resto del flujo
         url_pdf = await generar_cv(proyectos_seleccionados_flat, experiencias_cv, "CV_Matias_Perez_Nauto.pdf")
+        print(f"⏱️ PDF Generación + Upload: {time.perf_counter() - t4:.2f}s")
+
+        tiempo_final = time.perf_counter() - inicio_total
+        print(f"✅ PROCESO COMPLETADO en {tiempo_final:.2f}s")
+
 
         return JSONResponse(content={
             "cv_url": url_pdf
         })
     except Exception as e:
-        print("❌ ERROR INTERNO:", str(e))
+        print(f"❌ ERROR INTERNO tras {time.perf_counter() - inicio_total:.2f}s: {str(e)}")
         print(traceback.format_exc())
         return JSONResponse(status_code=500, content={"error": "Fallo interno en propuesta"})
 

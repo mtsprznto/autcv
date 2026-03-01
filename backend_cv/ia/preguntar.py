@@ -1,11 +1,14 @@
 
+import asyncio
 import os
 import sys
 from pathlib import Path
+
+from groq import AsyncGroq
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 
-from utils.utils import chunk_text
+from utils.utils import chunk_text, extraer_y_limpiar_json, limpiar_texto_u
 from ia.connect import get_groq_client
 import json
 
@@ -157,7 +160,66 @@ def generar_experiencia_desde_readme(propuesta: str, proyectos: list) -> list:
 
     return experiencias_adaptadas
 
+async def generar_experiencia_desde_readme_async(propuesta: str, proyectos: list) -> list:
+    # Usamos AsyncGroq para permitir concurrencia
+    # Debes adaptar tu función get_groq_client para que devuelva AsyncGroq
+    client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY_2"))
+    model_name = os.getenv("MODEL_2")
 
+    print(f"Procesando {len(proyectos)} proyectos en paralelo...")
+
+    # Creamos las tareas (sin ejecutarlas todavía)
+    tareas = [
+        procesar_un_proyecto_ia(client, model_name, propuesta, proyecto)
+        for proyecto in proyectos
+    ]
+
+    # DISPARAMOS TODO AL MISMO TIEMPO
+    resultados = await asyncio.gather(*tareas)
+
+    # Filtramos los que fallaron (None)
+    experiencias_finales = [res for res in resultados if res is not None]
+    
+    return experiencias_finales
+
+sem = asyncio.Semaphore(3)
+
+async def procesar_un_proyecto_ia(client: AsyncGroq, model_name: str, propuesta: str, proyecto: dict):
+    """Lógica para procesar un único proyecto con la IA."""
+    async with sem:
+        try:
+            proyecto_json = json.dumps(proyecto, ensure_ascii=False, indent=2)
+            
+            messages = [
+                {"role": "system", "content": "Eres un experto en CVs... (Tu prompt actual)"},
+                {"role": "user", "content": f"Propuesta:\n{propuesta}\n\nProyecto:\n{proyecto_json}"}
+            ]
+
+            try:
+                # Llamada asíncrona real
+                chat_completion = await client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    temperature=0.2 # Menor temperatura = JSON más estable
+                )
+                raw_output = chat_completion.choices[0].message.content.strip()
+                
+                experiencia = extraer_y_limpiar_json(raw_output)
+                if experiencia:
+                    # Si la IA devolvió una lista de un elemento, la aplanamos
+                    if isinstance(experiencia, list) and len(experiencia) > 0:
+                        return experiencia[0]
+                    return experiencia
+                return None
+            except Exception as e:
+                print(f"❌ Error en proyecto {proyecto.get('name', 'unknown')}: {e}")
+                return None
+        except Exception as e:
+            if "429" in str(e):
+                print(f"⚠️ Rate limit alcanzado para {proyecto.get('name')}. Reintentando en 2s...")
+                await asyncio.sleep(2) # Pausa de seguridad
+                # Aquí podrías reintentar una vez más si quisieras
+            return None
 
 def responder_propuesta(proyectos: list, pregunta: str)-> str:
     """
@@ -204,3 +266,18 @@ def responder_propuesta(proyectos: list, pregunta: str)-> str:
     except Exception as e:
         print(f"❌ Error al generar CV adaptado [responder_propuesta]: {e}")
         return "No se pudo adaptar el CV correctamente."
+
+
+def limpiar_y_parsear_json(texto: str):
+    """Elimina tags <think> y extrae el bloque JSON puro."""
+    # Eliminar contenido de razonamiento del modelo
+    texto_limpio = re.sub(r"<think>.*?</think>", "", texto, flags=re.DOTALL)
+    # Buscar el primer '{' y el último '}'
+    match = re.search(r"\{.*\}", texto_limpio, re.DOTALL)
+    if not match:
+        return None
+    try:
+        return json.loads(match.group())
+    except json.JSONDecodeError:
+        return None
+
