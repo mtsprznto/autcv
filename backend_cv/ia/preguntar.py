@@ -63,7 +63,7 @@ def seleccionar_proyectos(proyectos: list, propuesta: str = "No especificada") -
         except Exception as e:
             print(f"❌ Error al procesar chunk {i}: {e}")
 
-    return proyectos_seleccionados
+    return proyectos_seleccionados[:6]
 
 
 
@@ -182,44 +182,70 @@ async def generar_experiencia_desde_readme_async(propuesta: str, proyectos: list
     
     return experiencias_finales
 
-sem = asyncio.Semaphore(2)
+sem = asyncio.Semaphore(3)
 
 async def procesar_un_proyecto_ia(client: AsyncGroq, model_name: str, propuesta: str, proyecto: dict):
     """Lógica para procesar un único proyecto con la IA."""
     async with sem:
-        try:
-            proyecto_json = json.dumps(proyecto, ensure_ascii=False, indent=2)
-            
-            messages = [
-                {"role": "system", "content": "Eres un experto en CVs... (Tu prompt actual)"},
-                {"role": "user", "content": f"Propuesta:\n{propuesta}\n\nProyecto:\n{proyecto_json}"}
-            ]
+        proyecto_json = json.dumps(proyecto, ensure_ascii=False, indent=2)
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "Eres un experto en redacción de currículums técnicos. "
+                    "Tu tarea es leer el README de cada proyecto y generar una experiencia profesional adaptada al CV, alineada con la propuesta laboral. "
+                    "Extrae palabras clave relevantes y redacta una descripción profesional, clara y orientada al impacto. "
+                    "Tu única salida debe ser SOLO un objeto JSON válido. No escribas nada antes ni después. "
+                    "Devuelve un array JSON con los siguientes campos por cada experiencia:\n"
+                    " - empresa: nombre de la empresa o proyecto\n"
+                    " - fecha: rango de tiempo (ej. May 2024 - Ago 2024)\n"
+                    " - titulo: cargo desempeñado\n"
+                    " - posicion: rol específico (ej. SRE, Frontend Developer)\n"
+                    " - business: sector o tipo de negocio\n"
+                    " - experiencia_cv: descripción clara y orientada al impacto\n"
+                    " - stack: lista de tecnologías usadas\n"
+                    " - cicd: herramientas de CI/CD\n"
+                    " - observabilidad: herramientas de monitoreo\n"
+                    " - vcs: sistema de control de versiones\n"
+                    " - datasources: bases de datos o fuentes de datos\n"
+                    " - keywords_detectadas: palabras clave relevantes\n\n"
+                    "Agrega logros medibles, responsabilidades específicas y resultados. No incluyas texto adicional fuera del JSON."
+                )
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Propuesta laboral:\n{propuesta}\n\n"
+                    f"Proyecto con README:\n{proyecto_json}\n\n"
+                    "Devuélveme el objeto JSON con la experiencia adaptada para el CV."
+                )
+            }
+        ]
 
+        for attempt in range(3):
             try:
-                # Llamada asíncrona real
                 chat_completion = await client.chat.completions.create(
                     model=model_name,
                     messages=messages,
-                    temperature=0.2 # Menor temperatura = JSON más estable
+                    temperature=0.2
                 )
                 raw_output = chat_completion.choices[0].message.content.strip()
-                
                 experiencia = extraer_y_limpiar_json(raw_output)
                 if experiencia:
-                    # Si la IA devolvió una lista de un elemento, la aplanamos
                     if isinstance(experiencia, list) and len(experiencia) > 0:
                         return experiencia[0]
                     return experiencia
                 return None
             except Exception as e:
-                print(f"❌ Error en proyecto {proyecto.get('name', 'unknown')}: {e}")
-                return None
-        except Exception as e:
-            if "429" in str(e):
-                print(f"⚠️ Rate limit alcanzado para {proyecto.get('name')}. Reintentando en 2s...")
-                await asyncio.sleep(2) # Pausa de seguridad
-                # Aquí podrías reintentar una vez más si quisieras
-            return None
+                if "429" in str(e):
+                    match = re.search(r'try again in (\d+\.?\d*)s', str(e))
+                    wait = float(match.group(1)) + 2 if match else 30
+                    print(f"⚠️ Rate limit [{attempt+1}/3] para {proyecto.get('name', 'unknown')}. Esperando {wait:.1f}s...")
+                    await asyncio.sleep(wait)
+                else:
+                    print(f"❌ Error en proyecto {proyecto.get('name', 'unknown')}: {e}")
+                    return None
+        return None
 
 def responder_propuesta(proyectos: list, pregunta: str)-> str:
     """

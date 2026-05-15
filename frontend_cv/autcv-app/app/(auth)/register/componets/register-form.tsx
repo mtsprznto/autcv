@@ -1,4 +1,3 @@
-// app\(auth)\register\componets\register-form.tsx
 'use client'
 
 import { cn } from '@/lib/utils'
@@ -15,13 +14,10 @@ import { Label } from '@/components/ui/label'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-
-
 export function RegisterForm({
   className,
   ...props
 }: React.ComponentProps<'div'>) {
-  
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -29,19 +25,25 @@ export function RegisterForm({
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    const { error } = await supabase.auth.signUp({
+    setError(null)
+    setSuccess(null)
+
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${location.origin}/auth/callback`,
       },
     })
+
     if (error) {
       setError(error.message)
-      setSuccess(null)
+    } else if (data.session) {
+      // email confirmation desactivado en Supabase → usuario ya logueado
+      window.location.href = '/'
     } else {
-      setError(null)
-      setSuccess('Check your email to confirm your account.')
+      // email de confirmación enviado
+      setSuccess('Revisa tu correo para confirmar tu cuenta.')
     }
   }
 
@@ -91,7 +93,7 @@ export function RegisterForm({
                 <Button type="submit" className="w-full">
                   Create account
                 </Button>
-                <Button variant="outline" className="w-full" onClick={handleGoogleRegister}>
+                <Button type="button" variant="outline" className="w-full" onClick={handleGoogleRegister}>
                   Register with Google
                 </Button>
               </div>

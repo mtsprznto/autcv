@@ -30,7 +30,9 @@ export function SidebarMobile() {
       const currentPath = window.location.pathname;
 
       if (!session?.user && !publicRoutes.includes(currentPath)) {
-        router.push("/login");
+        if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH !== 'true') {
+          router.push("/login")
+        }
       } else {
         setUser(session?.user ?? null);
       }

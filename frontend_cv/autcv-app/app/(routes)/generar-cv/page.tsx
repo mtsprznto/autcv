@@ -33,8 +33,9 @@ export default function GenerarCv() {
         console.log(user);
         
       } else {
-        //console.log("no login");
-        router.push("/login"); 
+        if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH !== 'true') {
+          router.push("/login")
+        }
       }
 
       setLoading(false);
@@ -55,7 +56,7 @@ export default function GenerarCv() {
         body: JSON.stringify({ propuesta }),
       });
       const data = await res.json();
-      setCvUrl(`${data.cv_url}?t=${Date.now()}`);
+      setCvUrl(data.cv_url);
     } catch (err) {
       console.error("❌ Error al generar el CV:", err);
     } finally {

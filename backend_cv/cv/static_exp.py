@@ -1,6 +1,42 @@
 # Puedes tener esto en un archivo separado como experiencias_estaticas.py
 experiencias_manuales = [
     {
+        "empresa": "Jurispeed",
+        "fecha": "(Mar 2026 - Actualidad)",
+        "posicion": "Fullstack AI Engineer / Developer",
+        "negocio": "LegalTech; Inteligencia Artificial aplicada al Derecho; Automatización de procesos judiciales.",
+        "alcance": (
+            "Apoyo técnico en el ciclo de vida de datos para un ecosistema de IA legal. "
+            "Diseño e implementación de un motor de ingesta masiva (ETL) en Python para la "
+            "indexación de más de 600k sentencias judiciales en una arquitectura RAG. "
+            "Desarrollo evolutivo de un chatbot especializado utilizando Vue 3 y FastAPI, "
+            "optimizando la recuperación semántica de documentos y la interfaz de usuario "
+            "para abogados. Implementación de sistemas de scraping distribuido para la "
+            "extracción y limpieza de datos provenientes de portales del Poder Judicial."
+        ),
+        "stack": "Python (FastAPI), Vue 3, Pinia, TypeScript, Tailwind CSS v4, DynamoDB, Redis, RAG Architecture",
+        "cicd": "Git, GitHub, Docker, SSH Tunneling, pnpm, Clerk (Auth/RBAC)",
+        "datasources": "Lexintel API (Vector DB), Scrapy/Playwright, REST API, AWS DynamoDB"
+    },
+    {
+        "empresa": "Blast-Up",
+        "fecha": "(Mar 2026 - Actualidad)",
+        "posicion": "Lead Fullstack Developer",
+        "negocio": "Minería Digital y Simulación Geomecánica; Soluciones SaaS para Ingeniería de Tronadura.",
+        "alcance": (
+            "Liderazgo técnico en el ecosistema digital Blast-Up, desarrollando un simulador de vibraciones en tiempo real "
+            "que permite a ingenieros de minas visualizar datos críticos de forma profesional y accesible. "
+            "Arquitectura e implementación de visualizaciones 3D complejas con React Three Fiber y mapeo geoespacial "
+            "interactivo mediante Leaflet. Desarrollo integral de una plataforma de gestión de certificados y "
+            "landing pages de alto rendimiento, integrando seguridad avanzada con Next-Auth y persistencia de datos "
+            "robusta con Prisma y PostgreSQL. Optimización de recursos mediante automatización de procesamiento de imágenes "
+            "y despliegue de infraestructura en AWS."
+        ),
+        "stack": "Next.js 16 (React 19), TypeScript, Three.js (React Three Fiber), Tailwind CSS 4, Prisma, PostgreSQL, Zustand, Framer Motion",
+        "cicd": "AWS SDK (S3), Vitest (Unit Testing), Prisma Migrations, Scripts de optimización (Node.js)",
+        "datasources": "REST API, S3 Presigned URLs, GeoJSON, PostgreSQL"
+    },
+    {
         "empresa": "Fundación Bienestar Animal",
         "fecha": "(Sep 2025 - Actualidad)",
         "posicion": "Desarrollador Frontend",

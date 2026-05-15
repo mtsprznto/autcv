@@ -10,14 +10,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
+import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const supabase = createPagesBrowserClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -29,14 +28,14 @@ export function LoginForm({
       password,
     });
     if (error) setError(error.message);
-    else window.location.href = "/"; // Redirige al home o dashboard
+    else window.location.href = "/";
   };
 
   const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`, // Asegúrate de configurar esta URL en Supabase
+        redirectTo: `${location.origin}/auth/callback`,
       },
     });
   };
@@ -87,6 +86,7 @@ export function LoginForm({
                   Login
                 </Button>
                 <Button
+                  type="button"
                   variant="outline"
                   className="w-full"
                   onClick={handleGoogleLogin}
@@ -97,7 +97,7 @@ export function LoginForm({
             </div>
             <div className="mt-4 text-center text-sm">
               Don&apos;t have an account?{" "}
-              <a href="#" className="underline underline-offset-4">
+              <a href="/register" className="underline underline-offset-4">
                 Sign up
               </a>
             </div>

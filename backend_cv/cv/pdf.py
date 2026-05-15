@@ -25,18 +25,44 @@ class PDF(FPDF):
 
 
     def header(self):
-        self.set_font("Arial", "B", 9)
-        self.cell(0, 9, limpiar_texto("Currículum"), ln=True, align="R")
-        self.ln(0)
-        self.cell(0, 2, limpiar_texto(f"{self.mes} {self.año} rev"), ln=True, align="R")
+        self.set_font("Roboto", "B", 16)
+        self.cell(0, 10, "Matias Pérez Nauto", ln=False, align="L")
+        self.set_font("Roboto", "", 8)
+        self.set_text_color(120, 120, 120)
+        self.cell(0, 10, f"{self.mes} {self.año}", ln=True, align="R")
+        self.set_text_color(0, 0, 0)
+        self.set_font("Roboto", "", 9)
+        self.set_text_color(100, 100, 100)
+        self.cell(0, 4, "contacto@mtsprz.org  |  +56 975475781  |  Ingeniería en Ejecución en Informática", ln=True)
+        self.set_text_color(0, 0, 0)
         self.ln(2)
-
-    def section_title(self, title):
-        self.set_font("Roboto", "B", 12)
-        self.set_fill_color(255, 255, 255)
-        self.cell(0, 5, limpiar_texto(title), ln=True, fill=True)
+        self.set_draw_color(180, 180, 180)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
         self.ln(3)
+
+    def section_title(self, title):
+        self.set_font("Roboto", "B", 9)
+        self.set_text_color(43, 108, 176)
+        self.cell(0, 5, limpiar_texto(title.upper()), ln=True)
+        self.set_text_color(0, 0, 0)
+        self.set_draw_color(43, 108, 176)
+        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+        self.set_draw_color(0, 0, 0)
+        self.ln(3)
+
+    def render_education_entry(self, institution, years, degree):
+        page_w = self.w - self.l_margin - self.r_margin
+        self.set_font("Roboto", "B", 10)
+        inst_w = min(self.get_string_width(institution) + 2, page_w * 0.7)
+        self.cell(inst_w, 5, institution, ln=0)
+        self.set_font("Roboto", "", 9)
+        self.set_text_color(120, 120, 120)
+        self.cell(page_w - inst_w, 5, years, ln=True, align="R")
+        self.set_text_color(43, 108, 176)
+        self.set_font("Roboto", "", 9)
+        self.multi_cell(0, 4, degree, ln=True)
+        self.set_text_color(0, 0, 0)
+        self.ln(2)
 
     def multi_section(self, items):
         self.set_font("Roboto", "", 10)
@@ -125,6 +151,58 @@ class PDF(FPDF):
 
         self.ln(2)
     
+    def render_experience(self, empresa, fecha, titulo, business, scope, stack, cicd, datasources):
+        page_w = self.w - self.l_margin - self.r_margin
+
+        # Empresa (bold) + Fecha (gray right)
+        self.set_font("Roboto", "B", 10)
+        emp_w = min(self.get_string_width(empresa) + 2, page_w * 0.65)
+        self.cell(emp_w, 5, empresa, ln=0)
+        self.set_font("Roboto", "", 9)
+        self.set_text_color(120, 120, 120)
+        self.cell(page_w - emp_w, 5, fecha, ln=True, align="R")
+        self.set_text_color(0, 0, 0)
+
+        # Título en azul
+        if titulo:
+            self.set_text_color(43, 108, 176)
+            self.set_font("Roboto", "", 9)
+            self.multi_cell(0, 4, titulo, ln=True)
+            self.set_text_color(0, 0, 0)
+
+        # Negocio (gray)
+        if business:
+            self.set_font("Roboto", "", 9)
+            self.set_text_color(120, 120, 120)
+            self.multi_cell(0, 4, business, ln=True)
+            self.set_text_color(0, 0, 0)
+
+        # Descripción/Scope
+        if scope:
+            self.set_font("Roboto", "", 9)
+            self.set_text_color(40, 40, 40)
+            self.multi_cell(0, 4, scope, ln=True)
+            self.set_text_color(0, 0, 0)
+
+        self.ln(1)
+
+        # Tech line separada por |
+        parts = []
+        if stack: parts.append(f"Stack: {stack}")
+        if cicd:  parts.append(f"CI/CD: {cicd}")
+        if datasources: parts.append(f"DB: {datasources}")
+        if parts:
+            self.set_font("Roboto", "", 8)
+            self.set_text_color(80, 80, 80)
+            self.multi_cell(0, 4, "  |  ".join(parts), ln=True)
+            self.set_text_color(0, 0, 0)
+
+        # Separador suave
+        self.set_draw_color(200, 200, 200)
+        self.line(self.l_margin, self.get_y() + 1, self.w - self.r_margin, self.get_y() + 1)
+        self.set_draw_color(0, 0, 0)
+        self.ln(4)
+
     def footer(self):
         self.ln(5)
         self.set_y(-25)
