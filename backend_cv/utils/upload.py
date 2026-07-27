@@ -85,26 +85,25 @@ async def subir_cv(pdf: PDF, nombre_archivo: str) -> str:
         return local_url
 
     # --- MODO SUPABASE: subir vía REST API ---
+    supabase_url = os.getenv("SUPABASE_URL")
+    api_key = os.getenv("SUPABASE_SERVICE_KEY")
+    bucket = os.getenv("SUPABASE_BUCKET", "cv-pdfs")
+
+    # Validar que las env vars existan
+    if not supabase_url or not api_key:
+        print(f"❌ Faltan SUPABASE_URL o SUPABASE_SERVICE_KEY en Vercel")
+        print(f"   SUPABASE_URL={'✅' if supabase_url else '❌'}")
+        print(f"   SUPABASE_SERVICE_KEY={'✅' if api_key else '❌'}")
+        return None
+
     try:
-        supabase_url = os.getenv("SUPABASE_URL")
-        api_key = os.getenv("SUPABASE_SERVICE_KEY")
-        bucket = os.getenv("SUPABASE_BUCKET", "cv-pdfs")
-        
         print(f"📤 [UPLOAD] Subiendo a Supabase bucket='{bucket}' archivo='{nombre_archivo}'...")
-        
         public_url = await _supabase_upload(bucket, nombre_archivo, pdf_bytes, api_key, supabase_url)
         print(f"✅ PDF subido a Supabase: {public_url}")
         return public_url
 
     except Exception as e:
         print(f"❌ Error al subir a Supabase: {type(e).__name__}: {e}")
-        # Fallback: guardar en disco si falla Supabase
-        local_dir = os.path.join(os.path.dirname(__file__), "..", "output")
-        os.makedirs(local_dir, exist_ok=True)
-        local_path = os.path.join(local_dir, nombre_archivo)
-        with open(local_path, "wb") as f:
-            f.write(pdf_bytes)
-        print(f"⚠️ Fallback: PDF guardado en disco: {local_path}")
-        return f"http://127.0.0.1:8000/output/{nombre_archivo}"
+        return None
 
 # -------------------------
