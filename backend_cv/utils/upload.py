@@ -1,9 +1,9 @@
 
-
 # -------------------------
 # UPLOADS
 from io import BytesIO
 import os
+import httpx
 from cv.pdf import PDF
 
 
@@ -14,9 +14,7 @@ def _load_env():
 
 
 def _should_use_supabase() -> bool:
-    """Determina si se debe usar Supabase Storage.
-    - FORCE_SUPABASE=true → siempre Supabase (para pruebas en local)
-    - Si no, detecta por URL_FRONTEND (localhost = modo disco)"""
+    """Determina si se debe usar Supabase Storage."""
     _load_env()
     force = os.getenv("FORCE_SUPABASE", "").strip().lower()
     print(f"🔍 [DEBUG] FORCE_SUPABASE='{force}'")
@@ -31,20 +29,48 @@ def _should_use_supabase() -> bool:
     return not is_local
 
 
-def _get_supabase_client():
-    """Crea un cliente de Supabase con la service_role key."""
-    from supabase import create_client
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_SERVICE_KEY")
-    print(f"🔍 [DEBUG] SUPABASE_URL='{url}'")
-    print(f"🔍 [DEBUG] SUPABASE_SERVICE_KEY={'✅ presente' if key else '❌ faltante'}")
-    if not url or not key:
-        raise ValueError("Faltan SUPABASE_URL o SUPABASE_SERVICE_KEY en .env")
-    return create_client(url, key)
+async def _supabase_upload(bucket: str, filename: str, pdf_bytes: bytes, api_key: str, supabase_url: str) -> str:
+    """Sube archivo a Supabase Storage vía REST API y retorna URL firmada."""
+    upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
+    
+    async with httpx.AsyncClient() as client:
+        # 1. Subir archivo (upsert)
+        resp = await client.post(
+            upload_url,
+            content=pdf_bytes,
+            headers={
+                "apikey": api_key,
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/pdf",
+                "x-upsert": "true",
+            },
+            timeout=30,
+        )
+        if resp.status_code not in (200, 201):
+            raise Exception(f"Upload failed ({resp.status_code}): {resp.text}")
+
+        # 2. Generar URL firmada (365 días)
+        sign_url = f"{supabase_url}/storage/v1/object/sign/{bucket}/{filename}"
+        resp_sign = await client.post(
+            sign_url,
+            json={"expiresIn": 365 * 24 * 60 * 60},  # 365 días
+            headers={
+                "apikey": api_key,
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=10,
+        )
+        if resp_sign.status_code != 200:
+            raise Exception(f"Sign failed ({resp_sign.status_code}): {resp_sign.text}")
+
+        signed_path = resp_sign.json().get("signedURL", "")
+        full_url = f"{supabase_url}{signed_path}" if signed_path.startswith("/") else signed_path
+        return full_url
 
 
 async def subir_cv(pdf: PDF, nombre_archivo: str) -> str:
-    pdf_bytes = bytes(pdf.output())  # bytearray → bytes para Supabase
+    pdf_bytes = bytes(pdf.output())
 
     # --- MODO LOCAL: guardar en disco ---
     if not _should_use_supabase():
@@ -58,26 +84,15 @@ async def subir_cv(pdf: PDF, nombre_archivo: str) -> str:
         print(f"🔗 URL local: {local_url}")
         return local_url
 
-    # --- MODO SUPABASE: subir a Storage ---
+    # --- MODO SUPABASE: subir vía REST API ---
     try:
-        supabase = _get_supabase_client()
-        bucket = os.getenv("SUPABASE_BUCKET", "cv-pdfs")
-        print(f"📤 [UPLOAD] Subiendo a Supabase bucket='{bucket}' archivo='{nombre_archivo}'...")
-
-        res = supabase.storage.from_(bucket).upload(
-            path=nombre_archivo,
-            file=pdf_bytes,
-            file_options={"content-type": "application/pdf", "upsert": "true"}
-        )
-
-        # Generar URL firmada válida por 365 días (bucket privado)
-        signed_res = supabase.storage.from_(bucket).create_signed_url(
-            path=nombre_archivo,
-            expires_in=365 * 24 * 60 * 60  # 365 días en segundos
-        )
-        signed_path = signed_res["signedURL"]
         supabase_url = os.getenv("SUPABASE_URL")
-        public_url = f"{supabase_url}{signed_path}" if signed_path.startswith("/") else signed_path
+        api_key = os.getenv("SUPABASE_SERVICE_KEY")
+        bucket = os.getenv("SUPABASE_BUCKET", "cv-pdfs")
+        
+        print(f"📤 [UPLOAD] Subiendo a Supabase bucket='{bucket}' archivo='{nombre_archivo}'...")
+        
+        public_url = await _supabase_upload(bucket, nombre_archivo, pdf_bytes, api_key, supabase_url)
         print(f"✅ PDF subido a Supabase: {public_url}")
         return public_url
 
