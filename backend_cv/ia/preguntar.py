@@ -185,39 +185,37 @@ async def generar_experiencia_desde_readme_async(propuesta: str, proyectos: list
 sem = asyncio.Semaphore(3)
 
 async def procesar_un_proyecto_ia(client: AsyncGroq, model_name: str, propuesta: str, proyecto: dict):
-    """Lógica para procesar un único proyecto con la IA."""
+    """Genera描述ión de PROYECTO DESTACADO (NO experiencia laboral) para el CV."""
     async with sem:
         proyecto_json = json.dumps(proyecto, ensure_ascii=False, indent=2)
         messages = [
             {
                 "role": "system",
                 "content": (
-                    "Eres un experto en redacción de currículums técnicos. "
-                    "Tu tarea es leer el README de cada proyecto y generar una experiencia profesional adaptada al CV, alineada con la propuesta laboral. "
-                    "Extrae palabras clave relevantes y redacta una descripción profesional, clara y orientada al impacto. "
-                    "Tu única salida debe ser SOLO un objeto JSON válido. No escribas nada antes ni después. "
-                    "Devuelve un array JSON con los siguientes campos por cada experiencia:\n"
-                    " - empresa: nombre de la empresa o proyecto\n"
-                    " - fecha: rango de tiempo (ej. May 2024 - Ago 2024)\n"
-                    " - titulo: cargo desempeñado\n"
-                    " - posicion: rol específico (ej. SRE, Frontend Developer)\n"
-                    " - business: sector o tipo de negocio\n"
-                    " - experiencia_cv: descripción clara y orientada al impacto\n"
-                    " - stack: lista de tecnologías usadas\n"
-                    " - cicd: herramientas de CI/CD\n"
-                    " - observabilidad: herramientas de monitoreo\n"
-                    " - vcs: sistema de control de versiones\n"
-                    " - datasources: bases de datos o fuentes de datos\n"
-                    " - keywords_detectadas: palabras clave relevantes\n\n"
-                    "Agrega logros medibles, responsabilidades específicas y resultados. No incluyas texto adicional fuera del JSON."
+                    "Eres un experto en redacción de CV técnicos optimizados para sistemas ATS (Applicant Tracking Systems). "
+                    "REGLA ABSOLUTA: NUNCA inventes nombres de empresas. Solo usa el nombre exacto del proyecto que se te proporciona. "
+                    "Este es un PROYECTO DESTACADO del portafolio, NO una experiencia laboral. "
+                    "Tu tarea: describir el proyecto técnico de forma concisa y profesional, resaltando tecnologías relevantes para la propuesta laboral. "
+                    "Formato de salida: SOLO un objeto JSON válido. Sin texto antes ni después.\n\n"
+                    "Campos obligatorios:\n"
+                    '  "proyecto": nombre EXACTO del proyecto (tal cual aparece en el JSON de entrada)\n'
+                    '  "tecnologias": lista de tecnologías principales usadas\n'
+                    '  "descripcion": 2-3 oraciones sobre qué hace el proyecto y qué problemática resuelve\n'
+                    '  "relevancia": por qué este proyecto es relevante para la propuesta laboral (1 oración)\n\n'
+                    "REGLAS ATS:\n"
+                    "- Usar palabras clave técnicas exactas de la propuesta (ej: FastAPI, PostgreSQL, Docker, AWS)\n"
+                    "- Evitar adjetivos vacíos: 'increíble', 'fantástico', 'robusto'\n"
+                    "- Enfocarse en: tecnologías, arquitectura, integraciones, resultados medibles\n"
+                    "- NO inventar empresas, fechas de empleo, ni roles que no existen\n"
+                    "- Longitud máxima descripción: 150 palabras"
                 )
             },
             {
                 "role": "user",
                 "content": (
-                    f"Propuesta laboral:\n{propuesta}\n\n"
-                    f"Proyecto con README:\n{proyecto_json}\n\n"
-                    "Devuélveme el objeto JSON con la experiencia adaptada para el CV."
+                    f"PROPUESTA LABORAL (requerimientos):\n{propuesta}\n\n"
+                    f"PROYECTO DEL PORTAFOLIO:\n{proyecto_json}\n\n"
+                    "Genera la descripción JSON del proyecto destacado. Recuerda: NO es experiencia laboral, es proyecto del portafolio."
                 )
             }
         ]
@@ -227,7 +225,7 @@ async def procesar_un_proyecto_ia(client: AsyncGroq, model_name: str, propuesta:
                 chat_completion = await client.chat.completions.create(
                     model=model_name,
                     messages=messages,
-                    temperature=0.2
+                    temperature=0.1  # Baja temperature = menos alucinaciones
                 )
                 raw_output = chat_completion.choices[0].message.content.strip()
                 experiencia = extraer_y_limpiar_json(raw_output)

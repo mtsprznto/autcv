@@ -4,6 +4,8 @@ import traceback
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 from cv.generarCv import generar_cv
 
@@ -16,6 +18,8 @@ from utils.obtener_proyectos_actualizados import obtener_proyectos_actualizados,
 from utils.utils import limpiar_texto_u, preparar_readme_para_modelo
 
 from ia.preguntar import generar_experiencia_desde_readme_async, seleccionar_proyectos, responder_propuesta, generar_experiencia_desde_readme
+
+from cv.static_exp import experiencias_manuales
 
 
 
@@ -35,6 +39,11 @@ app.add_middleware(
     allow_headers=["*"],                    # ["Content-Type", "Authorization", ...]
     expose_headers=["*"]
 )
+
+# Servir archivos estáticos desde output/ (solo en local)
+output_dir = os.path.join(os.path.dirname(__file__), "output")
+if os.path.exists(output_dir):
+    app.mount("/output", StaticFiles(directory=output_dir), name="output")
 
 
 
@@ -110,41 +119,56 @@ async def recibir_propuesta(payload: PropuestaInput):
         # ====================================================================
         t3 = time.perf_counter()
 
-
-        experiencias_cv_raw = await generar_experiencia_desde_readme_async(
+        # Generar descripciones de PROYECTOS DESTACADOS (no experiencias laborales)
+        proyectos_ia_raw = await generar_experiencia_desde_readme_async(
             payload.normalizada(), 
             proyectos_seleccionados_readme
         )
 
-        experiencias_cv = []
-        proyectos_finales = [] # Lista auxiliar para los que sí tienen experiencia
+        # Empresas manuales que NUNCA deben aparecer como proyectos IA
+        empresas_manuales = {exp["empresa"].lower().strip() for exp in experiencias_manuales}
 
-        # 2. Mapeo seguro con validación
-        for proyecto, exp_raw in zip(proyectos_seleccionados_readme, experiencias_cv_raw):
+        proyectos_destacados = []  # Solo para sección "Proyectos Destacados" del CV
+
+        for proyecto, exp_raw in zip(proyectos_seleccionados_readme, proyectos_ia_raw):
             if exp_raw:
-                # Limpieza de caracteres unicode (\xa6, etc.)
+                # Limpieza de caracteres unicode
                 exp_limpia = {k: limpiar_texto_u(v) if isinstance(v, str) else v for k, v in exp_raw.items()}
                 
-                # Asignamos los datos al objeto proyecto
-                proyecto["experiencia_cv"] = exp_limpia.get("experiencia_cv", "Sin descripción generada.")
-                proyecto["keywords_detectadas"] = exp_limpia.get("keywords_detectadas", [])
+                # FILTRO CRÍTICO: descartar si parece experiencia laboral inventada
+                proyecto_nombre = exp_limpia.get("proyecto", "").lower().strip()
+                empresa_nombre = exp_limpia.get("empresa", "").lower().strip()
                 
-                experiencias_cv.append(exp_limpia)
-                proyectos_finales.append(proyecto)
+                # No incluir si el nombre coincide con una empresa manual
+                if proyecto_nombre in empresas_manuales or empresa_nombre in empresas_manuales:
+                    print(f"⏭️ [FILTRADA] Duplica empresa manual: {exp_limpia.get('proyecto') or exp_limpia.get('empresa')}")
+                    continue
                 
-                # DEBUGGER: Siempre útil en FIE para rastrear qué se generó
-                print(f"✅ [DEBUG] Experiencia generada para: {proyecto.get('name') or proyecto.get('empresa')}")
+                # Guardar como proyecto destacado (NO como experiencia laboral)
+                proyectos_destacados.append({
+                    "nombre": proyecto.get("name", exp_limpia.get("proyecto", "Proyecto")),
+                    "tecnologias": exp_limpia.get("tecnologias", exp_limpia.get("stack", [])),
+                    "descripcion": exp_limpia.get("descripcion", exp_limpia.get("experiencia_cv", "")),
+                    "relevancia": exp_limpia.get("relevancia", ""),
+                })
+                
+                print(f"✅ [PROYECTO] Destacado: {proyecto.get('name')}")
             else:
-                print(f"⚠️ [DEBUG] Falló la generación para proyecto: {proyecto.get('name')}")
+                print(f"⚠️ [DEBUG] Falló generación para: {proyecto.get('name')}")
 
-        print(f"⏱️ Generar experiencias (IA Paralela): {time.perf_counter() - t3:.2f}s")
+        print(f"⏱️ Generar proyectos (IA Paralela): {time.perf_counter() - t3:.2f}s")
         
         # ====================================================================
         # ====================================================================
         # ====================================================================
         t4 = time.perf_counter()
-        # Usar esta lista en el resto del flujo
-        url_pdf = await generar_cv(proyectos_seleccionados_flat, experiencias_cv, "CV_Matias_Perez_Nauto.pdf")
+        # Pasar experiencias manuales + proyectos destacados (separados)
+        url_pdf = await generar_cv(
+            proyectos_seleccionados_flat, 
+            experiencias_manuales,  # Solo las manuales como experiencia laboral
+            proyectos_destacados,   # Proyectos IA como destacados
+            "CV_Matias_Perez_Nauto.pdf"
+        )
         print(f"⏱️ PDF Generación + Upload: {time.perf_counter() - t4:.2f}s")
 
         tiempo_final = time.perf_counter() - inicio_total
